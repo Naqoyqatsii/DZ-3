@@ -8,6 +8,8 @@ enable_testing()
 
 add_executable(DZ-3 main.cpp)
 
+target_compile_features(DZ-3 PUBLIC cxx_std_20)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 set(CPACK_GENERATOR DEB)
