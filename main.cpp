@@ -1,36 +1,51 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream>
+#include <memory>
 #include <algorithm>
 
 template <typename T>
-class MyAllocator {
+class MyAllocator
+{
 public:
     template <typename U>
-    struct rebind {
+    struct rebind
+    {
         typedef MyAllocator<U> other;
     };
 
-    MyAllocator() noexcept {}
-    template <typename U>
-    MyAllocator(const MyAllocator<U>& other) noexcept {}
+    typedef T value_type;
+    typedef T *pointer;
+    typedef const T *const_pointer;
+    typedef T &reference;
+    typedef const T &const_reference;
 
-    T* allocate(std::size_t n) {
-        if (n > std::numeric_limits<std::size_t>::max() / sizeof(T)) {
-            throw std::bad_alloc();
-        }
-        if (auto p = static_cast<T*>(std::malloc(n * sizeof(T)))) {
-            return p;
-        }
-        throw std::bad_alloc();
+    MyAllocator() noexcept {}
+
+    template <class U>
+    MyAllocator(const MyAllocator<U> &) noexcept {}
+
+    T *allocate(std::size_t n)
+    {
+        return static_cast<T *>(::operator new(n * sizeof(T)));
     }
 
-    void deallocate(T* p, std::size_t) noexcept {
-        std::free(p);
+    void deallocate(T *p, std::size_t n)
+    {
+        ::operator delete(p);
+    }
+
+    template <class Up, class... Args>
+    void construct(Up *p, Args &&...args)
+    {
+        ::new ((void *)p) Up(std::forward<Args>(args)...);
+    }
+
+    void destroy(pointer p)
+    {
+        p->~T();
     }
 };
-
 
 std::array<u_int8_t, 4> split(const std::string &str, char d)
 {
@@ -58,14 +73,6 @@ void separattor()
     std::cout << std::endl;
 }
 
-void print(const std::vector<std::array<uint8_t, 4>, MyAllocator<std::array<uint8_t, 4>>> &ip_pool)
-{
-    for (int i = 0; i < ip_pool.size(); i++)
-    {
-        printArray(ip_pool[i]);
-    }
-}
-
 void printArray(const std::array<uint8_t, 4> &ip)
 {
     std::cout << unsigned(ip[0]) << "." << unsigned(ip[1]) << "." << unsigned(ip[2]) << "." << unsigned(ip[3]) << std::endl;
@@ -87,7 +94,10 @@ int main(int argc, char const *argv[])
 
         // TODO reverse lexicographically sort
         sort(ip_pool.rbegin(), ip_pool.rend());
-        print(ip_pool);
+        for (int i = 0; i < ip_pool.size(); i++)
+        {
+            printArray(ip_pool[i]);
+        }
 
         separattor();
 
