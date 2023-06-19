@@ -1,138 +1,104 @@
 #include <iostream>
-#include <string>
-#include <vector>
-#include <memory>
-#include <algorithm>
+#include <map>
 
-template <typename T>
+template <class T, size_t Count = 10>
 class MyAllocator
 {
 public:
-    template <typename U>
+    using value_type = T;
+    using pointer = T *;
+    using const_pointer = const T *;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+
+    template <class U>
     struct rebind
     {
-        typedef MyAllocator<U> other;
+        using other = MyAllocator<U, Count>;
     };
-
-    typedef T value_type;
-    typedef T *pointer;
-    typedef const T *const_pointer;
-    typedef T &reference;
-    typedef const T &const_reference;
 
     MyAllocator() noexcept {}
 
     template <class U>
-    MyAllocator(const MyAllocator<U> &) noexcept {}
+    MyAllocator(const MyAllocator<U, Count> &) noexcept {}
 
     T *allocate(std::size_t n)
     {
-        return static_cast<T *>(::operator new(n * sizeof(T)));
+        if (n > Count)
+        {
+            throw std::bad_alloc();
+        }
+        if (auto p = static_cast<T *>(std::malloc(n * sizeof(T))))
+        {
+            return p;
+        }
+        throw std::bad_alloc();
     }
 
-    void deallocate(T *p, std::size_t n)
+    void deallocate(T *p, std::size_t) noexcept
     {
-        ::operator delete(p);
-    }
-
-    template <class Up, class... Args>
-    void construct(Up *p, Args &&...args)
-    {
-        ::new ((void *)p) Up(std::forward<Args>(args)...);
-    }
-
-    void destroy(pointer p)
-    {
-        p->~T();
+        std::free(p);
     }
 };
 
-std::array<u_int8_t, 4> split(const std::string &str, char d)
+template <typename T>
+using MyMap = std::map<int, T, std::less<int>, MyAllocator<std::pair<const int, T>>>;
+
+int factorial(int n)
 {
-    std::array<u_int8_t, 4> r;
-    int i = 0;
-    std::string::size_type start = 0;
-    std::string::size_type stop = str.find_first_of(d);
-    while (stop != std::string::npos)
+    return (n == 0) ? 1 : n * factorial(n - 1);
+}
+
+int main()
+{
+    // Создание экземпляра std::map<int, int>
+    std::map<int, int> map1;
+
+    // Заполнение 10 элементами, где ключ - это число от 0 до 9, а значение - факториал ключа
+    for (int i = 0; i < 10; ++i)
     {
-        r[i] = std::stoi(str.substr(start, stop - start));
-        start = stop + 1;
-        i++;
-        stop = str.find_first_of(d, start);
+        map1.emplace(i, factorial(i));
     }
 
-    r[i] = std::stoi(str.substr(start));
+    // Создание экземпляра std::map<int, int> с новым аллокатором, ограниченным 10 элементами
+    MyMap<int> map2;
 
-    return r;
-}
-
-void separattor()
-{
-    std::cout << std::endl;
-    std::cout << "********************************************" << std::endl;
-    std::cout << std::endl;
-}
-
-void printArray(const std::array<uint8_t, 4> &ip)
-{
-    std::cout << unsigned(ip[0]) << "." << unsigned(ip[1]) << "." << unsigned(ip[2]) << "." << unsigned(ip[3]) << std::endl;
-}
-
-int main(int argc, char const *argv[])
-{
-    try
+    // Заполнение 10 элементами, где ключ - это число от 0 до 9, а значение - факториал ключа
+    for (int i = 0; i < 10; ++i)
     {
-
-        std::vector<std::array<uint8_t, 4>, MyAllocator<std::array<uint8_t, 4>>> ip_pool;
-
-        for (std::string line; std::getline(std::cin, line);)
-        {
-            size_t pos = line.find_first_of('\t');
-            std::string ip_str = line.substr(0, pos);
-            ip_pool.push_back(split(ip_str, '.'));
-        }
-
-        // TODO reverse lexicographically sort
-        sort(ip_pool.rbegin(), ip_pool.rend());
-        for (int i = 0; i < ip_pool.size(); i++)
-        {
-            printArray(ip_pool[i]);
-        }
-
-        separattor();
-
-        for (const auto &addr : ip_pool)
-        {
-            if (addr[0] == 1)
-            {
-                printArray(addr);
-            }
-        }
-
-        separattor();
-
-        for (const auto &addr : ip_pool)
-        {
-            if (addr[0] == 46 && addr[1] == 70)
-            {
-                printArray(addr);
-            }
-        }
-
-        separattor();
-
-        for (const auto &addr : ip_pool)
-        {
-            if (std::find(addr.begin(), addr.end(), 46) != addr.end())
-            {
-                printArray(addr);
-            }
-        }
+        map2.emplace(i, factorial(i));
     }
-    catch (const std::exception &e)
+
+    // Вывод на экран всех значений (ключ и значение разделены пробелом) хранящихся в контейнере
+    std::cout << "\nВывод на экран всех значений (ключ и значение разделены пробелом) хранящихся в контейнере:" << std::endl;
+    for (const auto &[key, value] : map2)
     {
-        std::cerr << e.what() << std::endl;
+        std::cout << key << " " << value << std::endl;
+    }
+
+    // Создание экземпляра своего контейнера для хранения значений типа int
+    MyMap<int> myMap1;
+
+    // Заполнение 10 элементами от 0 до 9
+    for (int i = 0; i < 10; ++i)
+    {
+        myMap1.emplace(i, i);
+    }
+
+    // Создание экземпляра своего контейнера для хранения значений типа int с новым аллокатором, ограниченным 10 элементами
+    MyMap<int> myMap2;
+
+    // Заполнение 10 элементами от 0 до 9
+    for (int i = 0; i < 10; ++i)
+    {
+        myMap2.emplace(i, i);
+    }
+    // Вывод на экран всех значений, хранящихся в контейнере
+    std::cout << "\nВывод на экран всех значений, хранящихся в контейнере:" << std::endl;
+    for (const auto &[key, value] : myMap2)
+    {
+        std::cout << key << " " << value << std::endl;
     }
 
     return 0;
-}
+} 
