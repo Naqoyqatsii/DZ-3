@@ -1,10 +1,9 @@
-cmake_minimum_required(VERSION 3.26.0)
+cmake_minimum_required(VERSION 3.25.0)
 set(PATCH_VERSION "1" CACHE INTERNAL "Patch version")
 set(PROJECT_VESRION 0.0.${PATCH_VERSION})
 project(DZ-3 VERSION ${PROJECT_VESRION})
 
 include(CTest)
-enable_testing()
 
 add_executable(DZ-3 main.cpp)
 
